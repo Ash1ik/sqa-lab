@@ -18,8 +18,11 @@ app.use(session({
 
 // ── Database ────────────────────────────────────────────────────────────
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'students.db');
+const DB_PATH = process.env.DB_PATH || (process.env.VERCEL ? '/tmp/students.db' : path.join(__dirname, 'students.db'));
 const db = new Database(DB_PATH);
+
+// Trust proxy for Vercel / Render behind load balancers
+app.set('trust proxy', 1);
 db.pragma('journal_mode = WAL');
 
 db.exec(`
@@ -879,8 +882,12 @@ app.post('/delete/:id', requireAuth, (req, res) => {
   res.redirect('/dashboard');
 });
 
-// ── Start ───────────────────────────────────────────────────────────────
+// ── Export for Vercel / Start for local ─────────────────────────────────
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+if (process.env.VERCEL) {
+  module.exports = app;
+} else {
+  app.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}`);
+  });
+}
